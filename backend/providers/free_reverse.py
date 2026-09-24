@@ -8,14 +8,27 @@ class FreeReverseProvider(BaseProvider):
 
     # Map friendly/standard model names to upstream model names
     MODEL_MAPPING = {
+        "auto": "openai",
+        "auto-free": "openai",
+        "default": "openai",
         "gpt-4o": "openai",
         "gpt-4o-mini": "openai",
         "gpt-4o-free": "openai",
         "gpt-4o-mini-free": "openai",
-        "qwen-coder": "qwen-coder",
-        "qwen-coder-free": "qwen-coder",
-        "mistral": "mistral",
-        "mistral-free": "mistral"
+        "claude-3-5-sonnet": "openai",
+        "claude-3-5-sonnet-20241022": "openai",
+        "claude-3-5-haiku": "openai",
+        "claude-3-haiku-20240307": "openai",
+        "claude-3-opus-20240229": "openai",
+        "claude-3-sonnet-20240229": "openai",
+        "gemini-1.5-pro": "openai",
+        "gemini-1.5-flash": "openai",
+        "gemini-2.0-flash-exp": "openai",
+        "codex": "openai",
+        "qwen-coder": "openai",
+        "qwen-coder-free": "openai",
+        "mistral": "openai",
+        "mistral-free": "openai"
     }
 
     def format_headers(self, api_key: str) -> Dict[str, str]:
