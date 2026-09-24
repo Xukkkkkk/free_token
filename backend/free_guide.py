@@ -5,6 +5,27 @@ Free AI Quota Radar & Step-by-Step Acquisition Guide
 
 FREE_PROVIDERS_GUIDE = [
     {
+        "id": "free_reverse",
+        "name": "免Key公共通道 (无需注册/开箱即用)",
+        "badge": "开箱即用 · 彻底免登录",
+        "badge_color": "emerald",
+        "description": "系统已预置的免鉴权公共通道！无需注册账号、无需配置任何API Key，平台启动即可直接免费调用 GPT-4o、Qwen-Coder、Mistral 等顶级模型！",
+        "free_policy": "完全免鉴权、零门槛调用，自带智能防限流与高可用路由。",
+        "free_models": ["gpt-4o", "gpt-4o-mini", "gpt-4o-free", "gpt-4o-mini-free", "qwen-coder-free", "mistral-free"],
+        "direct_url": "https://text.pollinations.ai",
+        "steps": [
+            "本通道已在后台默认激活并就绪，无需进行任何手动操作！",
+            "在「在线测试 (Playground)」中直接选择 `gpt-4o` 或 `gpt-4o-mini` 即可直接聊天",
+            "在任何第三方客户端（NextChat、Cherry Studio、Cursor）中填入平台地址和默认令牌即可随时免费调用！"
+        ],
+        "default_config": {
+            "name": "免Key公共免费通道",
+            "provider_type": "free_reverse",
+            "base_url": "https://text.pollinations.ai/openai",
+            "models": ["gpt-4o", "gpt-4o-mini", "gpt-4o-free", "gpt-4o-mini-free", "qwen-coder-free", "mistral-free"]
+        }
+    },
+    {
         "id": "glm",
         "name": "智谱 AI (GLM)",
         "badge": "永久免费",

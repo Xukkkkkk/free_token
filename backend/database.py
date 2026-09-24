@@ -167,6 +167,26 @@ def init_db():
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, seed_channels)
 
+    # Ensure zero-key reverse channel exists and is active by default
+    cursor.execute("SELECT COUNT(*) as count FROM channels WHERE provider_type = 'free_reverse'")
+    if cursor.fetchone()["count"] == 0:
+        now = datetime.datetime.now().isoformat()
+        cursor.execute("""
+            INSERT INTO channels (
+                name, provider_type, base_url, api_key, models, is_active, weight,
+                balance_info, last_status, last_latency_ms, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 1, 30, ?, 'healthy', 450, ?, ?)
+        """, (
+            "免Key公共免费通道 (无需配置Key开箱即用)",
+            "free_reverse",
+            "https://text.pollinations.ai/openai",
+            "free-reverse-public",
+            json.dumps(["gpt-4o", "gpt-4o-mini", "gpt-4o-free", "gpt-4o-mini-free", "qwen-coder-free", "mistral-free"]),
+            json.dumps({"plan": "永久免登录免Key", "notes": "无需注册任何账号，开箱直接畅聊"}),
+            now,
+            now
+        ))
+
     conn.commit()
     conn.close()
 
