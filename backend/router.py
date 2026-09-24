@@ -92,15 +92,16 @@ class ModelRouter:
         for ch in candidates:
             provider = get_provider(ch.get("provider_type", "generic"))
             api_key = self.pick_key_for_channel(ch)
-            if not api_key:
+            if not api_key and ch.get("provider_type") != "free_reverse":
                 continue
 
             url = provider.format_chat_url(ch.get("base_url"))
-            headers = provider.format_headers(api_key)
+            headers = provider.format_headers(api_key or "no-key")
 
-            # Ensure model payload is set
+            # Ensure model payload is set and mapped if provider specifies MODEL_MAPPING
             payload = dict(request_body)
-            # If the user asked for a model that the upstream supports directly, pass it
+            if hasattr(provider, "MODEL_MAPPING") and requested_model in provider.MODEL_MAPPING:
+                payload["model"] = provider.MODEL_MAPPING[requested_model]
             start_time = time.time()
 
             try:
