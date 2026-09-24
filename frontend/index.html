@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free AI Quota Hub - 大模型免费额度聚合与路由平台</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .prose p { margin-bottom: 0.5rem; }
+    .prose code { background: rgba(0,0,0,0.06); padding: 2px 4px; border-radius: 4px; font-size: 0.875em; }
+    .dark .prose code { background: rgba(255,255,255,0.1); }
+    /* custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div id="app" class="flex flex-col min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-100 font-black text-lg">
+              AI
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Free AI Quota Hub</span>
+                <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2 py-0.5 rounded-full font-medium">免费额度聚合平台</span>
+              </div>
+              <p class="text-xs text-slate-500">统一聚合 GLM / 通义千问 / Gemini / GitHub Models 等官方免费配额</p>
+            </div>
+          </div>
+
+          <!-- Navigation Tabs -->
+          <nav class="flex space-x-1 sm:space-x-2">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              @click="currentTab = tab.id"
+              :class="[
+                'px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-2',
+                currentTab === tab.id 
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              ]"
+            >
+              <span>{{ tab.icon }}</span>
+              <span>{{ tab.name }}</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      <!-- Toast Notification -->
+      <transition enter-active-class="transition duration-300 ease-out transform" enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-200 ease-in transform" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="toast.show" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border border-slate-700">
+          <span :class="toast.isError ? 'text-rose-400' : 'text-emerald-400'">●</span>
+          <span>{{ toast.message }}</span>
+        </div>
+      </transition>
+
+      <!-- TAB 1: 免费额度雷达 (FREE QUOTA RADAR) -->
+      <section v-if="currentTab === 'radar'" class="space-y-6">
+        <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+          <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
+              <span>🎁 官方免费福利汇总</span>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight mb-2">获取各主流大模型官方免费额度</h2>
+            <p class="text-indigo-100 text-sm leading-relaxed">
+              各大厂商为吸引开发者，官方开放了诸如永久免费模型（如智谱 GLM-4-Flash）、每日免费调用频次（如 Google Gemini 15 RPM）、新用户赠礼或开发者免费层。按下方教程获取 API Key 录入本系统，即可实现多 Key 轮询与智能降级！
+            </p>
+          </div>
+          <div class="absolute -right-8 -bottom-8 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        </div>
+
+        <!-- Radar Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div 
+            v-for="guide in guides" 
+            :key="guide.id"
+            class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <h3 class="font-bold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">{{ guide.name }}</h3>
+                  <span class="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                    :class="{
+                      'bg-emerald-50 text-emerald-700 border border-emerald-200': guide.badge_color === 'green',
+                      'bg-blue-50 text-blue-700 border border-blue-200': guide.badge_color === 'blue',
+                      'bg-purple-50 text-purple-700 border border-purple-200': guide.badge_color === 'purple',
+                      'bg-teal-50 text-teal-700 border border-teal-200': guide.badge_color === 'emerald',
+                      'bg-amber-50 text-amber-700 border border-amber-200': guide.badge_color === 'amber',
+                      'bg-indigo-50 text-indigo-700 border border-indigo-200': guide.badge_color === 'indigo',
+                      'bg-cyan-50 text-cyan-700 border border-cyan-200': guide.badge_color === 'cyan',
+                    }"
+                  >
+                    {{ guide.badge }}
+                  </span>
+                </div>
+                <a :href="guide.direct_url" target="_blank" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center space-x-1">
+                  <span>直达官网</span>
+                  <span>↗</span>
+                </a>
+              </div>
+
+              <p class="text-slate-600 text-xs leading-relaxed mb-3">{{ guide.description }}</p>
+
+              <div class="bg-slate-50 rounded-xl p-3 mb-3 border border-slate-100">
+                <div class="text-xs font-semibold text-slate-700 mb-1">💡 免费策略与配额：</div>
+                <div class="text-xs text-slate-600 leading-snug">{{ guide.free_policy }}</div>
+              </div>
+
+              <div class="mb-3">
+                <div class="text-xs font-semibold text-slate-700 mb-1.5">包含免费模型：</div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span v-for="m in guide.free_models" :key="m" class="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-mono">
+                    {{ m }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Steps Collapsible -->
+              <details class="text-xs text-slate-600 cursor-pointer mb-4">
+                <summary class="font-medium text-indigo-600 hover:text-indigo-700 select-none">
+                  查看领取引导步骤 (共 {{ guide.steps.length }} 步)
+                </summary>
+                <ol class="list-decimal list-inside space-y-1 mt-2 pl-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <li v-for="(step, idx) in guide.steps" :key="idx" class="leading-relaxed">{{ step }}</li>
+                </ol>
+              </details>
+            </div>
+
+            <!-- Import Action -->
+            <button 
+              @click="openImportModal(guide)"
+              class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-medium py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
+            >
+              <span>⚡ 录入此平台 API Key</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: 渠道与额度池 (CHANNELS & QUOTA POOL) -->
+      <section v-if="currentTab === 'channels'" class="space-y-6">
+        <!-- Top Action Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">渠道与额度池管理</h2>
+            <p class="text-xs text-slate-500">管理所有已接入的上游模型供应商、检测健康状态及延迟，支持多 Key 轮换与自动故障降级</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <button 
+              @click="testAllChannels" 
+              :disabled="testingAll"
+              class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5"
+            >
+              <span>{{ testingAll ? '正在批量测试...' : '🔄 一键测试全部' }}</span>
+            </button>
+            <button 
+              @click="openAddChannelModal"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-sm"
+            >
+              <span>+ 新增渠道</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Channels List -->
+        <div class="grid grid-cols-1 gap-4">
+          <div 
+            v-for="ch in channels" 
+            :key="ch.id"
+            class="bg-white border rounded-2xl p-5 shadow-sm transition-all"
+            :class="ch.is_active ? 'border-slate-200' : 'border-slate-200 opacity-60 bg-slate-50/50'"
+          >
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <!-- Left info -->
+              <div class="space-y-2">
+                <div class="flex items-center space-x-3">
+                  <span class="font-bold text-base text-slate-900">{{ ch.name }}</span>
+                  <!-- Status badge -->
+                  <span 
+                    class="text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center space-x-1"
+                    :class="{
+                      'bg-emerald-50 text-emerald-700 border border-emerald-200': ch.last_status === 'healthy',
+                      'bg-amber-50 text-amber-700 border border-amber-200': ch.last_status === 'rate_limited',
+                      'bg-rose-50 text-rose-700 border border-rose-200': ch.last_status === 'error',
+                      'bg-slate-100 text-slate-600 border border-slate-200': ch.last_status === 'unknown'
+                    }"
+                  >
+                    <span>●</span>
+                    <span>{{ formatStatus(ch.last_status) }}</span>
+                  </span>
+
+                  <!-- Latency -->
+                  <span v-if="ch.last_latency_ms" class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded">
+                    ⚡ {{ ch.last_latency_ms }} ms
+                  </span>
+
+                  <!-- Provider Type Tag -->
+                  <span class="text-xs uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                    {{ ch.provider_type }}
+                  </span>
+                </div>
+
+                <div class="text-xs text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span>端点: <code class="text-slate-700">{{ ch.base_url }}</code></span>
+                  <span>权重: <b>{{ ch.weight }}</b></span>
+                  <span v-if="ch.last_checked_at">最近检测: {{ ch.last_checked_at }}</span>
+                </div>
+
+                <!-- Models tags -->
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span class="text-xs text-slate-400">可用模型:</span>
+                  <span 
+                    v-for="m in ch.models" 
+                    :key="m" 
+                    class="text-[11px] bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-200"
+                  >
+                    {{ m }}
+                  </span>
+                </div>
+
+                <!-- Error message if any -->
+                <div v-if="ch.last_error" class="text-xs text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-100">
+                  ⚠️ 异常信息: {{ ch.last_error }}
+                </div>
+              </div>
+
+              <!-- Right actions -->
+              <div class="flex items-center space-x-2 shrink-0 self-end md:self-center">
+                <!-- Toggle switch -->
+                <button 
+                  @click="toggleChannelStatus(ch)"
+                  :class="ch.is_active ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
+                  class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  {{ ch.is_active ? '已启用' : '已停用' }}
+                </button>
+
+                <!-- Ping Test button -->
+                <button 
+                  @click="testChannel(ch)"
+                  :disabled="ch.testing"
+                  class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors flex items-center space-x-1"
+                >
+                  <span>{{ ch.testing ? '测速中...' : '🔍 测试测速' }}</span>
+                </button>
+
+                <!-- Edit button -->
+                <button 
+                  @click="openEditModal(ch)"
+                  class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                >
+                  编辑
+                </button>
+
+                <!-- Delete button -->
+                <button 
+                  @click="deleteChannelConfirm(ch)"
+                  class="text-xs font-medium px-3 py-1.5 rounded-lg text-rose-600 border border-rose-200 hover:bg-rose-50 transition-colors"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: 统一分发与客户端接入 (UNIFIED TOKENS & INTEGRATION) -->
+      <section v-if="currentTab === 'tokens'" class="space-y-6">
+        <!-- Endpoint Card -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">统一聚合 API 接入信息</h2>
+              <p class="text-xs text-slate-500">将下方 API 地址和令牌填入任何支持 OpenAI 格式的客户端，即可畅享所有聚合的免费大模型</p>
+            </div>
+            <button 
+              @click="openAddTokenModal"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors"
+            >
+              + 生成新访问令牌
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
+              <div class="text-xs font-semibold text-slate-500 uppercase">接口基础地址 (API Base URL)</div>
+              <div class="flex items-center justify-between">
+                <code class="text-sm font-mono text-indigo-700 font-bold">{{ apiBaseUrl }}</code>
+                <button @click="copyText(apiBaseUrl, '已复制接口地址')" class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-100">
+                  复制
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
+              <div class="text-xs font-semibold text-slate-500 uppercase">默认主令牌 (Master API Key)</div>
+              <div class="flex items-center justify-between">
+                <code class="text-sm font-mono text-slate-800 font-bold truncate mr-2">{{ masterKey }}</code>
+                <button @click="copyText(masterKey, '已复制主令牌')" class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-100 shrink-0">
+                  复制
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token list -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-800">已生成的访问令牌列表</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3 font-semibold">名称/备注</th>
+                  <th class="py-2.5 px-3 font-semibold">令牌内容 (Token)</th>
+                  <th class="py-2.5 px-3 font-semibold">已消耗 Token</th>
+                  <th class="py-2.5 px-3 font-semibold">状态</th>
+                  <th class="py-2.5 px-3 font-semibold text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="t in tokens" :key="t.id" class="hover:bg-slate-50/50">
+                  <td class="py-3 px-3 font-medium text-slate-800">{{ t.name }}</td>
+                  <td class="py-3 px-3 font-mono text-indigo-600">{{ t.token }}</td>
+                  <td class="py-3 px-3 font-mono text-slate-600">{{ t.quota_used }}</td>
+                  <td class="py-3 px-3">
+                    <span class="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-semibold">有效</span>
+                  </td>
+                  <td class="py-3 px-3 text-right space-x-2">
+                    <button @click="copyText(t.token, '已复制令牌')" class="text-indigo-600 hover:text-indigo-800 font-medium">复制</button>
+                    <button v-if="t.token !== masterKey" @click="deleteTokenConfirm(t.id)" class="text-rose-600 hover:text-rose-800 font-medium">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Client Integration Guides -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-base font-bold text-slate-900">主流 AI 客户端一键配置指南</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-sm text-slate-800 flex items-center space-x-2">
+                <span>🍒 Cherry Studio</span>
+              </div>
+              <p class="text-xs text-slate-600">设置 -> 模型服务 -> 添加 OpenAI 兼容模型：</p>
+              <ul class="text-xs text-slate-500 space-y-1 list-disc list-inside">
+                <li>服务商名称：Free AI Pool</li>
+                <li>API 地址：<code>{{ apiBaseUrl }}</code></li>
+                <li>API 密钥：<code>{{ masterKey }}</code></li>
+              </ul>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-sm text-slate-800 flex items-center space-x-2">
+                <span>💬 NextChat (ChatGPT-Next-Web)</span>
+              </div>
+              <p class="text-xs text-slate-600">设置 -> 接口地址与密钥：</p>
+              <ul class="text-xs text-slate-500 space-y-1 list-disc list-inside">
+                <li>接口地址：<code>{{ apiBaseUrl }}</code></li>
+                <li>API Key：<code>{{ masterKey }}</code></li>
+                <li>自定义模型：填入 <code>glm-4-flash,gemini-1.5-flash,gpt-4o</code></li>
+              </ul>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-sm text-slate-800 flex items-center space-x-2">
+                <span>⌨️ Cursor / VS Code / Cline</span>
+              </div>
+              <p class="text-xs text-slate-600">Cursor Settings -> Models -> OpenAI API Key：</p>
+              <ul class="text-xs text-slate-500 space-y-1 list-disc list-inside">
+                <li>Override OpenAI Base URL：<code>{{ apiBaseUrl }}</code></li>
+                <li>API Key：<code>{{ masterKey }}</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: 在线测试 (PLAYGROUND) -->
+      <section v-if="currentTab === 'playground'" class="space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[75vh] overflow-hidden">
+          <!-- Playground header -->
+          <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div class="flex items-center space-x-3">
+              <span class="text-xs font-semibold text-slate-700">当前测试模型：</span>
+              <select v-model="selectedModel" class="text-xs font-mono bg-white border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option v-for="m in availableModels" :key="m.id" :value="m.id">{{ m.id }} ({{ m.owned_by }})</option>
+              </select>
+            </div>
+            <button @click="clearMessages" class="text-xs text-slate-500 hover:text-slate-800 font-medium">清空对话记录</button>
+          </div>
+
+          <!-- Messages list -->
+          <div ref="chatContainer" class="flex-1 overflow-y-auto p-5 space-y-4">
+            <div v-if="messages.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
+              <span class="text-4xl">🤖</span>
+              <p class="text-sm">选择聚合的免费模型，直接在浏览器中测试对话与生成效果！</p>
+            </div>
+
+            <div 
+              v-for="(msg, idx) in messages" 
+              :key="idx" 
+              :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']"
+            >
+              <div 
+                :class="[
+                  'max-w-2xl rounded-2xl px-4 py-3 text-sm shadow-sm leading-relaxed',
+                  msg.role === 'user' 
+                    ? 'bg-indigo-600 text-white rounded-br-none' 
+                    : 'bg-slate-100 text-slate-800 rounded-bl-none prose'
+                ]"
+                v-html="renderMarkdown(msg.content)"
+              >
+              </div>
+            </div>
+
+            <div v-if="isGenerating" class="flex justify-start">
+              <div class="bg-slate-100 text-slate-500 rounded-2xl rounded-bl-none px-4 py-2.5 text-xs animate-pulse flex items-center space-x-2">
+                <span>思考中...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message input -->
+          <div class="p-4 border-t border-slate-200 bg-white flex items-center space-x-3">
+            <textarea 
+              v-model="inputQuery" 
+              @keydown.enter.prevent="sendMessage"
+              placeholder="输入你的提示词，按 Enter 发送..." 
+              rows="1" 
+              class="flex-1 resize-none bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            ></textarea>
+            <button 
+              @click="sendMessage" 
+              :disabled="isGenerating || !inputQuery.trim()"
+              class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+            >
+              发送
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: 概览与日志 (STATS & LOGS) -->
+      <section v-if="currentTab === 'stats'" class="space-y-6">
+        <!-- Stat KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold mb-1">已激活渠道 / 总数</div>
+            <div class="text-2xl font-bold text-slate-900">{{ stats.active_channels }} <span class="text-sm font-normal text-slate-400">/ {{ stats.total_channels }}</span></div>
+            <div class="text-xs text-emerald-600 mt-2 font-medium">● {{ stats.healthy_channels }} 个渠道状态健康</div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold mb-1">累计网关调用次数</div>
+            <div class="text-2xl font-bold text-indigo-600">{{ stats.total_requests }} <span class="text-sm font-normal text-slate-400">次</span></div>
+            <div class="text-xs text-slate-400 mt-2">支持多客户端并发接入</div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold mb-1">已分发总 Token 数</div>
+            <div class="text-2xl font-bold text-slate-900">{{ formatNumber(stats.total_tokens) }}</div>
+            <div class="text-xs text-slate-400 mt-2">输入: {{ stats.prompt_tokens }} / 输出: {{ stats.completion_tokens }}</div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold mb-1">平均响应延迟</div>
+            <div class="text-2xl font-bold text-emerald-600">{{ stats.avg_latency_ms }} <span class="text-sm font-normal text-slate-400">ms</span></div>
+            <div class="text-xs text-slate-400 mt-2">智能优选低延迟线路</div>
+          </div>
+        </div>
+
+        <!-- Recent Logs Table -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800">最新请求调用记录</h3>
+            <button @click="fetchStats" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">刷新日志</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3 font-semibold">请求时间</th>
+                  <th class="py-2.5 px-3 font-semibold">使用模型</th>
+                  <th class="py-2.5 px-3 font-semibold">命中渠道</th>
+                  <th class="py-2.5 px-3 font-semibold">Token 消耗</th>
+                  <th class="py-2.5 px-3 font-semibold">耗时</th>
+                  <th class="py-2.5 px-3 font-semibold">状态</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="log in stats.recent_logs" :key="log.id" class="hover:bg-slate-50/50">
+                  <td class="py-3 px-3 text-slate-500">{{ log.created_at }}</td>
+                  <td class="py-3 px-3 font-mono font-medium text-slate-800">{{ log.model }}</td>
+                  <td class="py-3 px-3 text-slate-700">{{ log.channel_name || '-' }}</td>
+                  <td class="py-3 px-3 font-mono text-slate-600">{{ log.prompt_tokens + log.completion_tokens }}</td>
+                  <td class="py-3 px-3 font-mono text-slate-600">{{ log.latency_ms }} ms</td>
+                  <td class="py-3 px-3">
+                    <span 
+                      class="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                      :class="log.status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+                    >
+                      {{ log.status === 'success' ? '成功' : '失败' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="!stats.recent_logs || stats.recent_logs.length === 0">
+                  <td colspan="6" class="py-8 text-center text-slate-400">暂无调用记录，可在上方「在线测试」发一条消息试试！</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- MODAL: Import from Radar Guide -->
+    <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="font-bold text-base text-slate-900">一键导入 {{ activeGuide?.name }} 免费渠道</h3>
+          <button @click="showImportModal = false" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <p class="text-slate-600">
+            请前往 
+            <a :href="activeGuide?.direct_url" target="_blank" class="text-indigo-600 underline font-semibold">{{ activeGuide?.name }} 控制台</a> 
+            生成 API Key，复制并粘贴在下方：
+          </p>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">API Key / Token：</label>
+            <input 
+              v-model="importApiKey" 
+              type="password" 
+              placeholder="粘贴获取到的 Key (如 sk-... 或 AIzaSy...)" 
+              class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <span class="font-semibold text-slate-700">自动包含模型：</span>
+            <div class="flex flex-wrap gap-1 mt-1">
+              <span v-for="m in activeGuide?.free_models" :key="m" class="bg-white px-2 py-0.5 rounded text-[10px] font-mono border">
+                {{ m }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button @click="showImportModal = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">取消</button>
+          <button 
+            @click="submitImportGuide" 
+            :disabled="!importApiKey.trim() || isSubmitting"
+            class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl shadow-sm"
+          >
+            {{ isSubmitting ? '正在验证导入...' : '确认导入并测速' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Channel -->
+    <div v-if="showChannelModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-8">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="font-bold text-base text-slate-900">{{ editingChannelId ? '编辑渠道' : '新增自定义渠道' }}</h3>
+          <button @click="showChannelModal = false" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">渠道名称：</label>
+            <input v-model="channelForm.name" placeholder="例如：智谱 GLM 免费备用池" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">提供商类型：</label>
+              <select v-model="channelForm.provider_type" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="glm">智谱 GLM</option>
+                <option value="qwen">阿里通义千问 (DashScope)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="github">GitHub Models</option>
+                <option value="groq">Groq</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="generic">通用 OpenAI 兼容</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">权重 (Priority/Weight)：</label>
+              <input v-model.number="channelForm.weight" type="number" min="1" max="100" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Base URL (接口基础地址)：</label>
+            <input v-model="channelForm.base_url" placeholder="如：https://open.bigmodel.cn/api/paas/v4" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">API Key (支持多 Key 换行或逗号分隔，自动轮换轮询)：</label>
+            <textarea v-model="channelForm.api_key" rows="2" placeholder="填入 API Key" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">支持的模型列表 (逗号分隔)：</label>
+            <input v-model="channelForm.models_input" placeholder="glm-4-flash, glm-4-flashx" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button @click="showChannelModal = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">取消</button>
+          <button @click="submitChannelForm" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">保存渠道</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Add Token -->
+    <div v-if="showTokenModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <h3 class="font-bold text-base text-slate-900">生成新分发令牌</h3>
+          <button @click="showTokenModal = false" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">令牌名称/用途：</label>
+            <input v-model="tokenNameInput" placeholder="如：CherryStudio笔记本、朋友分享" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button @click="showTokenModal = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">取消</button>
+          <button @click="submitCreateToken" :disabled="!tokenNameInput.trim()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl shadow-sm">创建令牌</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        const currentTab = ref('radar');
+        const tabs = [
+          { id: 'radar', name: '免费额度雷达', icon: '🛰️' },
+          { id: 'channels', name: '渠道与额度池', icon: '⚡' },
+          { id: 'tokens', name: '统一分发接入', icon: '🔑' },
+          { id: 'playground', name: '在线测试 (Playground)', icon: '💬' },
+          { id: 'stats', name: '概览与日志', icon: '📊' }
+        ];
+
+        const guides = ref([]);
+        const channels = ref([]);
+        const tokens = ref([]);
+        const stats = ref({
+          total_channels: 0,
+          active_channels: 0,
+          healthy_channels: 0,
+          total_requests: 0,
+          total_tokens: 0,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          avg_latency_ms: 0,
+          recent_logs: []
+        });
+
+        const apiBaseUrl = ref(window.location.origin + '/v1');
+        const masterKey = ref('sk-free-ai-pool-master');
+
+        // Modals
+        const showImportModal = ref(false);
+        const activeGuide = ref(null);
+        const importApiKey = ref('');
+        const isSubmitting = ref(false);
+
+        const showChannelModal = ref(false);
+        const editingChannelId = ref(null);
+        const channelForm = ref({
+          name: '',
+          provider_type: 'glm',
+          base_url: '',
+          api_key: '',
+          models_input: '',
+          weight: 10
+        });
+
+        const showTokenModal = ref(false);
+        const tokenNameInput = ref('');
+
+        const testingAll = ref(false);
+
+        // Toast
+        const toast = ref({ show: false, message: '', isError: false });
+        const showToast = (message, isError = false) => {
+          toast.value = { show: true, message, isError };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        };
+
+        const copyText = (txt, msg = '已复制到剪贴板') => {
+          navigator.clipboard.writeText(txt);
+          showToast(msg);
+        };
+
+        // Playground
+        const availableModels = ref([]);
+        const selectedModel = ref('glm-4-flash');
+        const inputQuery = ref('');
+        const isGenerating = ref(false);
+        const messages = ref([]);
+        const chatContainer = ref(null);
+
+        const renderMarkdown = (text) => {
+          try {
+            return marked.parse(text || '');
+          } catch (e) {
+            return text;
+          }
+        };
+
+        const fetchGuides = async () => {
+          try {
+            const res = await fetch('/api/guides');
+            guides.value = await res.json();
+          } catch (e) {
+            console.error('Fetch guides failed', e);
+          }
+        };
+
+        const fetchChannels = async () => {
+          try {
+            const res = await fetch('/api/channels');
+            channels.value = await res.json();
+            // Refresh models list for playground
+            fetchAvailableModels();
+          } catch (e) {
+            console.error('Fetch channels failed', e);
+          }
+        };
+
+        const fetchTokens = async () => {
+          try {
+            const res = await fetch('/api/tokens');
+            tokens.value = await res.json();
+            if (tokens.value.length > 0) {
+              masterKey.value = tokens.value[0].token;
+            }
+          } catch (e) {
+            console.error('Fetch tokens failed', e);
+          }
+        };
+
+        const fetchStats = async () => {
+          try {
+            const res = await fetch('/api/stats');
+            stats.value = await res.json();
+          } catch (e) {
+            console.error('Fetch stats failed', e);
+          }
+        };
+
+        const fetchAvailableModels = async () => {
+          try {
+            const res = await fetch('/v1/models');
+            const data = await res.json();
+            availableModels.value = data.data || [];
+            if (availableModels.value.length > 0 && !selectedModel.value) {
+              selectedModel.value = availableModels.value[0].id;
+            }
+          } catch (e) {
+            console.error('Fetch models failed', e);
+          }
+        };
+
+        // Format helpers
+        const formatStatus = (s) => {
+          const map = { healthy: '正常可用', rate_limited: '频率限制', error: '异常故障', unknown: '未检测' };
+          return map[s] || s;
+        };
+
+        const formatNumber = (num) => {
+          return (num || 0).toLocaleString();
+        };
+
+        // Import modal
+        const openImportModal = (guide) => {
+          activeGuide.value = guide;
+          importApiKey.value = '';
+          showImportModal.value = true;
+        };
+
+        const submitImportGuide = async () => {
+          if (!importApiKey.value.trim()) return;
+          isSubmitting.value = true;
+          try {
+            const res = await fetch('/api/channels/import_guide', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                guide_id: activeGuide.value.id,
+                api_key: importApiKey.value.trim()
+              })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message || '导入成功！');
+              showImportModal.value = false;
+              fetchChannels();
+            } else {
+              showToast(data.detail || '导入失败', true);
+            }
+          } catch (e) {
+            showToast('请求异常: ' + e.message, true);
+          } finally {
+            isSubmitting.value = false;
+          }
+        };
+
+        // Channel operations
+        const openAddChannelModal = () => {
+          editingChannelId.value = null;
+          channelForm.value = {
+            name: '',
+            provider_type: 'glm',
+            base_url: 'https://open.bigmodel.cn/api/paas/v4',
+            api_key: '',
+            models_input: 'glm-4-flash, glm-4-flashx',
+            weight: 10
+          };
+          showChannelModal.value = true;
+        };
+
+        const openEditModal = (ch) => {
+          editingChannelId.value = ch.id;
+          channelForm.value = {
+            name: ch.name,
+            provider_type: ch.provider_type,
+            base_url: ch.base_url,
+            api_key: ch.api_key,
+            models_input: ch.models.join(', '),
+            weight: ch.weight || 10
+          };
+          showChannelModal.value = true;
+        };
+
+        const submitChannelForm = async () => {
+          const models = channelForm.value.models_input.split(',').map(m => m.trim()).filter(Boolean);
+          const payload = {
+            name: channelForm.value.name,
+            provider_type: channelForm.value.provider_type,
+            base_url: channelForm.value.base_url,
+            api_key: channelForm.value.api_key,
+            models: models,
+            weight: channelForm.value.weight
+          };
+
+          try {
+            let res;
+            if (editingChannelId.value) {
+              res = await fetch(`/api/channels/${editingChannelId.value}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            } else {
+              res = await fetch('/api/channels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            }
+            if (res.ok) {
+              showToast(editingChannelId.value ? '渠道更新成功' : '渠道添加成功');
+              showChannelModal.value = false;
+              fetchChannels();
+            } else {
+              const err = await res.json();
+              showToast(err.detail || '操作失败', true);
+            }
+          } catch (e) {
+            showToast('请求异常: ' + e.message, true);
+          }
+        };
+
+        const toggleChannelStatus = async (ch) => {
+          try {
+            await fetch(`/api/channels/${ch.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ is_active: !ch.is_active })
+            });
+            ch.is_active = !ch.is_active;
+            showToast(ch.is_active ? '已启用该渠道' : '已停用该渠道');
+            fetchChannels();
+          } catch (e) {
+            showToast('切换失败', true);
+          }
+        };
+
+        const testChannel = async (ch) => {
+          ch.testing = true;
+          try {
+            const res = await fetch(`/api/channels/${ch.id}/test`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              const r = data.test_result;
+              ch.last_status = r.status;
+              ch.last_latency_ms = r.latency_ms;
+              ch.last_error = r.message;
+              showToast(`测试完成: [${formatStatus(r.status)}] 延迟 ${r.latency_ms}ms`, r.status !== 'healthy');
+            } else {
+              showToast(data.detail || '测试失败', true);
+            }
+          } catch (e) {
+            showToast('测试异常: ' + e.message, true);
+          } finally {
+            ch.testing = false;
+          }
+        };
+
+        const testAllChannels = async () => {
+          testingAll.value = true;
+          for (const ch of channels.value) {
+            if (ch.is_active && !ch.api_key.includes('请在此填入')) {
+              await testChannel(ch);
+            }
+          }
+          testingAll.value = false;
+          showToast('所有渠道测试完成！');
+        };
+
+        const deleteChannelConfirm = async (ch) => {
+          if (!confirm(`确定删除渠道 "${ch.name}" 吗？`)) return;
+          try {
+            await fetch(`/api/channels/${ch.id}`, { method: 'DELETE' });
+            showToast('渠道已删除');
+            fetchChannels();
+          } catch (e) {
+            showToast('删除失败', true);
+          }
+        };
+
+        // Token management
+        const openAddTokenModal = () => {
+          tokenNameInput.value = '';
+          showTokenModal.value = true;
+        };
+
+        const submitCreateToken = async () => {
+          if (!tokenNameInput.value.trim()) return;
+          try {
+            const res = await fetch('/api/tokens', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: tokenNameInput.value.trim() })
+            });
+            if (res.ok) {
+              showToast('令牌创建成功！');
+              showTokenModal.value = false;
+              fetchTokens();
+            }
+          } catch (e) {
+            showToast('创建失败', true);
+          }
+        };
+
+        const deleteTokenConfirm = async (id) => {
+          if (!confirm('确定删除该令牌吗？')) return;
+          try {
+            await fetch(`/api/tokens/${id}`, { method: 'DELETE' });
+            showToast('令牌已删除');
+            fetchTokens();
+          } catch (e) {
+            showToast('删除失败', true);
+          }
+        };
+
+        // Playground chat
+        const clearMessages = () => {
+          messages.value = [];
+        };
+
+        const sendMessage = async () => {
+          const q = inputQuery.value.trim();
+          if (!q || isGenerating.value) return;
+
+          messages.value.push({ role: 'user', content: q });
+          inputQuery.value = '';
+          isGenerating.value = true;
+
+          await nextTick();
+          if (chatContainer.value) {
+            chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+          }
+
+          try {
+            const res = await fetch('/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${masterKey.value}`
+              },
+              body: JSON.stringify({
+                model: selectedModel.value || 'glm-4-flash',
+                messages: messages.value.map(m => ({ role: m.role, content: m.content })),
+                stream: false
+              })
+            });
+
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              messages.value.push({ role: 'assistant', content: `❌ 请求失败: ${err.detail || res.statusText}` });
+            } else {
+              const data = await res.json();
+              const reply = data.choices?.[0]?.message?.content || '无回复内容';
+              messages.value.push({ role: 'assistant', content: reply });
+            }
+          } catch (e) {
+            messages.value.push({ role: 'assistant', content: `❌ 网络连接异常: ${e.message}` });
+          } finally {
+            isGenerating.value = false;
+            await nextTick();
+            if (chatContainer.value) {
+              chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+            }
+            fetchStats();
+          }
+        };
+
+        onMounted(() => {
+          fetchGuides();
+          fetchChannels();
+          fetchTokens();
+          fetchStats();
+        });
+
+        return {
+          currentTab,
+          tabs,
+          guides,
+          channels,
+          tokens,
+          stats,
+          apiBaseUrl,
+          masterKey,
+          toast,
+          showToast,
+          copyText,
+          // Modals
+          showImportModal,
+          activeGuide,
+          importApiKey,
+          isSubmitting,
+          openImportModal,
+          submitImportGuide,
+          showChannelModal,
+          editingChannelId,
+          channelForm,
+          openAddChannelModal,
+          openEditModal,
+          submitChannelForm,
+          toggleChannelStatus,
+          testChannel,
+          testAllChannels,
+          testingAll,
+          deleteChannelConfirm,
+          showTokenModal,
+          tokenNameInput,
+          openAddTokenModal,
+          submitCreateToken,
+          deleteTokenConfirm,
+          // Helpers
+          formatStatus,
+          formatNumber,
+          fetchStats,
+          // Playground
+          availableModels,
+          selectedModel,
+          inputQuery,
+          isGenerating,
+          messages,
+          chatContainer,
+          sendMessage,
+          clearMessages,
+          renderMarkdown
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
